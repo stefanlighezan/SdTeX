@@ -8,6 +8,10 @@ class SdTeX:
     def process_sdtex_file(self):
         with open(self.input_file, 'r') as file:
             content = file.read()
+            processor = Processor(content)
+            processed_content = processor.process_content()
+
+            return processed_content
 
         # Process the content as needed. Here we're just returning the content as is.
         return content
