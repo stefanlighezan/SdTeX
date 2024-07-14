@@ -1,6 +1,11 @@
-(sdtitle style=
-{
+(sdtitle style={
     font_size: 24,
-    font_color: "#ff0000",
+    font_color: "#000000",
     font_weight: "bold",
-}) color (!sdtitle)
+}) Graph of y = x (!sdtitle)
+
+(sdgraph attributes = {
+    function: "x * x",
+    first_point: -10,
+    last_point: 10,
+}) (!sdgraph)

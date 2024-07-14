@@ -21,10 +21,11 @@ class Processor:
             self.styles[tag_type] = styles
         return self.styles
 
-
     def parse_tags(self):
         tag_pattern = r'\((.*?)\)(.*?)\(!\1\)'
         tag_pattern_with_style = r'\((.*?)\s*style=\s*\{(.*?)\}\)(.*?)\(!\1\)'
+        tag_pattern_with_attributes = r'\((.*?)\s+attributes\s*=\s*{([^}]*)}\s*\)(.*?)\(!\1\)'
+        
         for match in re.finditer(tag_pattern_with_style, self.content, flags=re.DOTALL):
             tag_type = match.group(1).strip()
             style_string = match.group(2).strip()
@@ -40,13 +41,30 @@ class Processor:
                 'content': tag_content,
                 'style': styles
             })
+        
+        for match in re.finditer(tag_pattern_with_attributes, self.content, flags=re.DOTALL):
+            tag_type = match.group(1).strip()
+            attributes_string = match.group(2).strip()
+            tag_content = match.group(3).strip()
+            attributes = {}
+            for line in attributes_string.split(','):
+                parts = line.strip().split(':')
+                if len(parts) == 2:
+                    key, value = parts
+                    attributes[key.strip()] = value.strip()
+            self.tags.append({
+                'type': tag_type,
+                'content': attributes,  # Store attributes as a dictionary
+                'style': {},  # Assuming no style for sdgraph with attributes in this context
+            })
+        
         for match in re.finditer(tag_pattern, self.content, flags=re.DOTALL):
             tag_type = match.group(1).strip()
             tag_content = match.group(2).strip()
             self.tags.append({
                 'type': tag_type,
                 'content': tag_content,
-                'tyle': self.styles.get(tag_type, {})  # Get style for the tag type, default to empty dict
+                'style': self.styles.get(tag_type, {})  # Get style for the tag type, default to empty dict
             })
 
     def replace_tag(self, match):
@@ -56,7 +74,7 @@ class Processor:
         self.tags.append({
             'type': tag_type,
             'content': tag_content,
-            'style': style  # Ensure 'tyle' matches the key used when accessing in 'ave_as_pdf'
+            'style': style  # Ensure 'style' matches the key used when accessing in 'save_as_pdf'
         })
         return ''
 
@@ -64,5 +82,4 @@ class Processor:
         self.parse_stylesheet()
         self.parse_tags()
 
-        print(self.tags)
         return self.tags

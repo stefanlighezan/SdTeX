@@ -1,6 +1,7 @@
 import os
 from Processor import Processor
 from fpdf import FPDF
+from matplotlib.pyplot import plot, savefig
 
 class SdTeX:
     def __init__(self, input_file):
@@ -68,8 +69,29 @@ class SdTeX:
                 
                 pdf.multi_cell(0, 10, content)
             
+            elif attribute['type'] == 'sdgraph':
+                attributes = attribute['content']
+                function = attributes.get('function', "x")  # Default function is y = x
+                first_point = int(attributes.get('first_point', -10))
+                last_point = int(attributes.get('last_point', 10))
+                
+                # Save graph as image
+                graph_file_path = os.path.join(output_dir, 'graph.png')
+                self.save_as_graph(function, first_point, last_point, graph_file_path)
+
+                # Add graph image to PDF
+                pdf.image(graph_file_path, x=10, y=pdf.get_y() + 10, w=180)
+                pdf.ln(100)  # Move down after adding the image
+
         pdf.output(output_file_path)
         print(f"PDF file has been saved to {output_file_path}")
+
+    def save_as_graph(self, function, first_point, last_point, graph_file_path):
+        x_values = [i for i in range(first_point, last_point + 1)]
+        y_values = [eval(eval(function.replace('x', str(x)))) for x in x_values]
+        plot(x_values, y_values)
+        savefig(graph_file_path)
+        print(f"Graph image has been saved to {graph_file_path}")
 
 
 def main():
