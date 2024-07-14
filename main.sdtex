@@ -2,10 +2,21 @@
     font_size: 24,
     font_color: "#000000",
     font_weight: "bold",
-}) Graph of y = x (!sdtitle)
+}) Graph of y = sin(x) (!sdtitle)
 
 (sdgraph attributes = {
-    function: "x * x",
+    function: "math.sin(x)",
     first_point: -10,
     last_point: 10,
+    quality: 100,
+    graph_color: "#A0A000",
 }) (!sdgraph)
+
+(sdimage src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg")(!sdimage)
+(sdtitle style={
+    font_size: 24,
+    font_color: "#000000",
+    font_weight: "bold",
+}) Graph of y = sin(x) (!sdtitle)
+(sdimage src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg")(!sdimage)
+(sdimage src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg")(!sdimage)

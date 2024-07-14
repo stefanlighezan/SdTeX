@@ -1,12 +1,19 @@
 import os
-from Processor import Processor
+import requests
+from io import BytesIO
+from PIL import Image as PILImage
 from fpdf import FPDF
-from matplotlib.pyplot import plot, savefig
+from Processor import Processor  # Assuming Processor class is defined in Processor.py
+import matplotlib.pyplot as plt
+import matplotlib.colors
+import numpy as np
+import math
 
 class SdTeX:
     def __init__(self, input_file):
         self.input_file = input_file
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.current_y = 0  # Initialize current_y to 0
 
     def process_sdtex_file(self):
         with open(self.input_file, 'r') as file:
@@ -19,6 +26,20 @@ class SdTeX:
         output_dir = os.path.join(self.script_dir, 'Output')
         os.makedirs(output_dir, exist_ok=True)
         return output_dir
+
+    def download_image(self, url, output_path):
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                with open(output_path, 'wb') as f:
+                    f.write(response.content)
+                return True
+            else:
+                print(f"Failed to download image from {url}. Status code: {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"Error downloading image from {url}: {e}")
+            return False
 
     def run(self):
         input_file_path = self.input_file
@@ -40,59 +61,108 @@ class SdTeX:
 
         for attribute in attributes:
             if attribute['type'] == 'sdtitle':
-                content = attribute['content']
-                style = attribute['style']
-                
-                # Extract style properties
-                font_size = style.get('font_size', '').strip('"').replace('dp', '').strip()
-                font_color = style.get('font_color', '').strip('"')
-                font_weight = style.get('font_weight', '').strip('"')
-                
-                # Parse hex color values
-                if font_color.startswith('#') and len(font_color) == 7:
-                    try:
-                        r = int(font_color[1:3], 16)
-                        g = int(font_color[3:5], 16)
-                        b = int(font_color[5:7], 16)
-                    except ValueError:
-                        r, g, b = 0, 0, 0  # Default to black if parsing fails
-                else:
-                    r, g, b = 0, 0, 0  # Default to black if format is incorrect
-
-                # Set font and color in PDF
-                if font_weight == 'bold':
-                    pdf.set_font("Arial", size=int(font_size), style='B')
-                else:
-                    pdf.set_font("Arial", size=int(font_size))
-
-                pdf.set_text_color(r, g, b)
-                
-                pdf.multi_cell(0, 10, content)
-            
+                self.add_title(pdf, attribute)
             elif attribute['type'] == 'sdgraph':
-                attributes = attribute['content']
-                function = attributes.get('function', "x")  # Default function is y = x
-                first_point = int(attributes.get('first_point', -10))
-                last_point = int(attributes.get('last_point', 10))
-                
-                # Save graph as image
-                graph_file_path = os.path.join(output_dir, 'graph.png')
-                self.save_as_graph(function, first_point, last_point, graph_file_path)
-
-                # Add graph image to PDF
-                pdf.image(graph_file_path, x=10, y=pdf.get_y() + 10, w=180)
-                pdf.ln(100)  # Move down after adding the image
+                self.add_graph(pdf, attribute, output_dir)
+            elif attribute['type'] == 'sdimage':
+                self.add_image(pdf, attribute, output_dir)
 
         pdf.output(output_file_path)
         print(f"PDF file has been saved to {output_file_path}")
 
-    def save_as_graph(self, function, first_point, last_point, graph_file_path):
-        x_values = [i for i in range(first_point, last_point + 1)]
-        y_values = [eval(eval(function.replace('x', str(x)))) for x in x_values]
-        plot(x_values, y_values)
-        savefig(graph_file_path)
+    def add_title(self, pdf, attribute):
+        content = attribute['content']
+        style = attribute['style']
+        font_size = int(style.get('font_size', '12').strip('"').replace('dp', '').strip())
+        font_color = style.get('font_color', '#000000').strip('"')
+        font_weight = style.get('font_weight', 'normal').strip('"')
+
+        if font_color.startswith('#') and len(font_color) == 7:
+            try:
+                r = int(font_color[1:3], 16)
+                g = int(font_color[3:5], 16)
+                b = int(font_color[5:7], 16)
+            except ValueError:
+                r, g, b = 0, 0, 0
+        else:
+            r, g, b = 0, 0, 0
+
+        if font_weight == 'bold':
+            pdf.set_font("Arial", size=font_size, style='B')
+        else:
+            pdf.set_font("Arial", size=font_size)
+
+        pdf.set_text_color(r, g, b)
+
+        if self.current_y + pdf.font_size + 8 > pdf.page_break_trigger:
+            pdf.add_page()
+            self.current_y = 0
+
+        pdf.multi_cell(0, 10, content)
+        self.current_y += pdf.font_size + 8  # Increase current_y by the cell height + padding
+
+    def add_image(self, pdf, attribute, output_dir):
+        src = attribute['content']
+        image_file_name = os.path.basename(src)
+        image_file_path = os.path.join(output_dir, image_file_name)
+
+        if self.download_image(src, image_file_path):
+            with PILImage.open(image_file_path) as img:
+                width, height = img.size
+                resized_height = 180 * height / width  # Adjusting width to 180, maintaining aspect ratio
+
+            if self.current_y + resized_height + 10 > pdf.page_break_trigger:
+                pdf.add_page()
+                self.current_y = 0
+
+            pdf.image(image_file_path, x=10, y=self.current_y + 10, w=180)
+            self.current_y += resized_height + 20  # Increase current_y by resized image height + padding
+
+            # Add a newline to separate the image from the text
+            pdf.ln(10)
+
+        else:
+            print(f"Failed to download and embed image from {src}.")
+
+    def add_graph(self, pdf, attribute, output_dir):
+        attributes = attribute['attributes']
+        function = attributes.get('function', "x")
+        first_point = int(attributes.get('first_point', -10))
+        last_point = int(attributes.get('last_point', 10))
+        quality = int(attributes.get('quality', 10))
+        graph_color = attributes.get('graph_color', "#00ff00").strip('"').strip("'")
+
+        graph_file_path = os.path.join(output_dir, 'graph.png')
+        self.save_as_graph(function, first_point, last_point, quality, graph_color, graph_file_path)
+
+        with PILImage.open(graph_file_path) as img:
+            width, height = img.size
+            resized_height = 180 * height / width  # Adjusting width to 180, maintaining aspect ratio
+
+        if self.current_y + resized_height + 10 > pdf.page_break_trigger:
+            pdf.add_page()
+            self.current_y = 0
+
+        pdf.image(graph_file_path, x=10, y=self.current_y + 10, w=180)
+        self.current_y += resized_height + 20  # Increase current_y by resized image height + padding
+
+        # Add a newline to separate the graph from the text
+        pdf.ln(10)
+    def save_as_graph(self, function, first_point, last_point, quality, graph_color, graph_file_path):
+        x_values = np.linspace(first_point, last_point, int((last_point - first_point) * quality))
+        y_values = self.evaluate_function(function, x_values)
+
+        rgb_color = matplotlib.colors.to_rgb(graph_color)
+
+        plt.figure()
+        plt.plot(x_values, y_values, color=rgb_color)
+        plt.savefig(graph_file_path)
+        plt.close()
         print(f"Graph image has been saved to {graph_file_path}")
 
+    def evaluate_function(self, function, x_values):
+        # Vectorized evaluation using NumPy
+        return [eval(eval(function.replace('x', str(x)))) for x in x_values]
 
 def main():
     sdtex = SdTeX("../main.sdtex")
