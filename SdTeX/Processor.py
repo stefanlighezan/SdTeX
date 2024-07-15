@@ -68,7 +68,7 @@ class Processor:
                     'content': tag_content,
                     'style': styles,
                     'attributes': attributes
-            })
+                })
 
     def replace_tag(self, match):
         tag_type = match.group(1).strip()

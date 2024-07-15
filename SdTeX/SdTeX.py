@@ -3,11 +3,12 @@ import requests
 from io import BytesIO
 from PIL import Image as PILImage
 from fpdf import FPDF
-from Processor import Processor  # Assuming Processor class is defined in Processor.py
 import matplotlib.pyplot as plt
 import matplotlib.colors
 import numpy as np
 import math
+from Processor import Processor
+import re
 
 class SdTeX:
     def __init__(self, input_file):
@@ -60,15 +61,23 @@ class SdTeX:
         pdf.set_auto_page_break(auto=True, margin=15)
 
         for attribute in attributes:
-            if attribute['type'] == 'sdtitle':
-                self.add_title(pdf, attribute)
-            elif attribute['type'] == 'sdgraph':
-                self.add_graph(pdf, attribute, output_dir)
-            elif attribute['type'] == 'sdimage':
-                self.add_image(pdf, attribute, output_dir)
+            self.add_attribute_to_pdf(pdf, attribute)
 
         pdf.output(output_file_path)
         print(f"PDF file has been saved to {output_file_path}")
+
+    def add_attribute_to_pdf(self, pdf, attribute):
+        if attribute['type'] == 'sdtitle':
+            self.add_title(pdf, attribute)
+        elif attribute['type'] == 'sdgraph':
+            self.add_graph(pdf, attribute)
+        elif attribute['type'] == 'sdimage':
+            self.add_image(pdf, attribute)
+        elif attribute['type'] == 'sdtex':
+            for child_attribute in attribute['children']:
+                self.add_attribute_to_pdf(pdf, child_attribute)
+        elif attribute['type'] == 'text':
+            self.add_text(pdf, attribute)
 
     def add_title(self, pdf, attribute):
         content = attribute['content']
@@ -94,16 +103,36 @@ class SdTeX:
 
         pdf.set_text_color(r, g, b)
 
-        if self.current_y + pdf.font_size + 8 > pdf.page_break_trigger:
+        # Apply text formatting
+        self.apply_text_formatting(pdf, content)
+
+        # Calculate the height of the cell
+        cell_height = pdf.font_size + 8
+
+        # Check if the text will wrap
+        text_width = pdf.get_string_width(content)
+        page_width = pdf.w - 2 * pdf.l_margin
+        num_lines = 1
+        if text_width > page_width:
+            # Calculate the number of lines
+            num_lines = math.ceil(text_width / page_width)
+            cell_height *= num_lines
+
+        if self.current_y + cell_height > pdf.page_break_trigger:
             pdf.add_page()
             self.current_y = 0
 
-        pdf.multi_cell(0, 10, content)
-        self.current_y += pdf.font_size + 8  # Increase current_y by the cell height + padding
+        pdf.ln(cell_height)  # Move to the next line
+        self.current_y += cell_height  # Increase current_y by the cell height + padding
 
-    def add_image(self, pdf, attribute, output_dir):
+    def add_text(self, pdf, attribute):
+        content = attribute['content']
+        self.apply_text_formatting(pdf, content)
+
+    def add_image(self, pdf, attribute):
         src = attribute['content']
         image_file_name = os.path.basename(src)
+        output_dir = os.path.join(self.script_dir, 'Output')
         image_file_path = os.path.join(output_dir, image_file_name)
 
         if self.download_image(src, image_file_path):
@@ -124,7 +153,7 @@ class SdTeX:
         else:
             print(f"Failed to download and embed image from {src}.")
 
-    def add_graph(self, pdf, attribute, output_dir):
+    def add_graph(self, pdf, attribute):
         attributes = attribute['attributes']
         function = attributes.get('function', "x")
         first_point = int(attributes.get('first_point', -10))
@@ -132,6 +161,7 @@ class SdTeX:
         quality = int(attributes.get('quality', 10))
         graph_color = attributes.get('graph_color', "#00ff00").strip('"').strip("'")
 
+        output_dir = os.path.join(self.script_dir, 'Output')
         graph_file_path = os.path.join(output_dir, 'graph.png')
         self.save_as_graph(function, first_point, last_point, quality, graph_color, graph_file_path)
 
@@ -148,6 +178,7 @@ class SdTeX:
 
         # Add a newline to separate the graph from the text
         pdf.ln(10)
+
     def save_as_graph(self, function, first_point, last_point, quality, graph_color, graph_file_path):
         x_values = np.linspace(first_point, last_point, int((last_point - first_point) * quality))
         y_values = self.evaluate_function(function, x_values)
@@ -164,6 +195,21 @@ class SdTeX:
         # Vectorized evaluation using NumPy
         return [eval(eval(function.replace('x', str(x)))) for x in x_values]
 
+    def apply_text_formatting(self, pdf, text):
+        parts = re.split(r'(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*)', text)
+        for part in parts:
+            if part.startswith('***') and part.endswith('***'):
+                pdf.set_font("Arial", style='BI')
+                pdf.multi_cell(0, 5, part[3:-3], align='L')
+            elif part.startswith('**') and part.endswith('**'):
+                pdf.set_font("Arial", style='B')
+                pdf.multi_cell(0, 5, part[2:-2], align='L')
+            elif part.startswith('*') and part.endswith('*'):
+                pdf.set_font("Arial", style='I')
+                pdf.multi_cell(0, 5, part[1:-1], align='L')
+            else:
+                pdf.set_font("Arial")
+                pdf.multi_cell(0, 5, part, align='L')
 def main():
     sdtex = SdTeX("../main.sdtex")
     sdtex.run()
