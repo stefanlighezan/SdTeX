@@ -1,5 +1,6 @@
 import re
 
+
 class Processor:
     def __init__(self, content):
         self.content = content
@@ -17,14 +18,14 @@ class Processor:
             self.content = self.content.replace(f"${key}", value)
 
     def parse_stylesheet(self):
-        pattern = r'\((.*?)\s*style=\s*\{(.*?)\}\)'
+        pattern = r"\((.*?)\s*style=\s*\{(.*?)\}\)"
         match = re.search(pattern, self.content, flags=re.DOTALL)
         if match:
             tag_type = match.group(1).strip()
             style_string = match.group(2).strip()
             styles = {}
-            for line in style_string.split(','):
-                parts = line.strip().split(':')
+            for line in style_string.split(","):
+                parts = line.strip().split(":")
                 if len(parts) == 2:
                     key, value = parts
                     styles[key.strip()] = value.strip()
@@ -33,12 +34,12 @@ class Processor:
 
     def parse_tags(self):
         tag_pattern = re.compile(
-            r'\((\w+)'
-            r'(?:\s+style\s*=\s*\{([^}]*)\})?'
-            r'(?:\s+attributes\s*=\s*\{([^}]*)\})?'
+            r"\((\w+)"
+            r"(?:\s+style\s*=\s*\{([^}]*)\})?"
+            r"(?:\s+attributes\s*=\s*\{([^}]*)\})?"
             r'(?:\s+src\s*=\s*"([^"]*)")?'
-            r'\)(.*?)\(!\1\)',
-            re.DOTALL
+            r"\)(.*?)\(!\1\)",
+            re.DOTALL,
         )
 
         for match in re.finditer(tag_pattern, self.content):
@@ -50,33 +51,33 @@ class Processor:
 
             styles = {}
             if style_string:
-                for line in style_string.split(','):
-                    parts = line.strip().split(':')
+                for line in style_string.split(","):
+                    parts = line.strip().split(":")
                     if len(parts) == 2:
                         key, value = parts
                         styles[key.strip()] = value.strip()
 
             attributes = {}
             if attributes_string:
-                for line in attributes_string.split(','):
-                    parts = line.strip().split(':')
+                for line in attributes_string.split(","):
+                    parts = line.strip().split(":")
                     if len(parts) == 2:
                         key, value = parts
                         attributes[key.strip()] = value.strip()
 
             if src:
                 self.tags[tag_type] = {
-                    'type': tag_type,
-                    'content': src,
-                    'style': styles,
-                    'attributes': attributes
+                    "type": tag_type,
+                    "content": src,
+                    "style": styles,
+                    "attributes": attributes,
                 }
             else:
                 self.tags[tag_type] = {
-                    'type': tag_type,
-                    'content': tag_content,
-                    'style': styles,
-                    'attributes': attributes
+                    "type": tag_type,
+                    "content": tag_content,
+                    "style": styles,
+                    "attributes": attributes,
                 }
 
     def process_content(self):

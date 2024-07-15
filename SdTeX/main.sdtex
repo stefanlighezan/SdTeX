@@ -1,0 +1,16 @@
+title: "SdTeX"
+
+(sdtitle style={
+    font_size: "18dp",
+    font_color: "#336699",
+    font_weight: "bold"
+})$title(!sdtitle)
+
+(sdgraph attributes={
+    function: "x",
+    first_point: -10,
+    last_point: 10,
+    quality: 100,
+    graph_color: "#00004B"
+})(!sdgraph)
+
