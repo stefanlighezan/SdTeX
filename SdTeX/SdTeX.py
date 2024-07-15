@@ -9,6 +9,7 @@ import numpy as np
 import math
 from Processor import Processor
 import re
+from Errors import *
 
 
 class SdTeX:
@@ -45,15 +46,13 @@ class SdTeX:
                 )
                 return False
         except Exception as e:
-            print(f"Error downloading image from {url}: {e}")
-            return False
+            raise SdTeXSrcError(f"Error finding image at address {url}")
 
     def run(self):
         input_file_path = self.input_file
 
         if not os.path.isfile(input_file_path):
-            print(f"Error: {input_file_path} does not exist.")
-            return
+            raise SdTeXProcessingError(f"Error: {input_file_path} does not exist")
 
         output_dir = self.create_output_directory()
         processed_content = self.process_sdtex_file()
@@ -61,16 +60,19 @@ class SdTeX:
         self.save_as_pdf(processed_content, output_dir)
 
     def save_as_pdf(self, attributes, output_dir):
-        output_file_path = os.path.join(output_dir, "output.pdf")
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=15)
+        try:
+            output_file_path = os.path.join(output_dir, "output.pdf")
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
 
-        for attribute in attributes:
-            self.add_attribute_to_pdf(pdf, attribute)
+            for attribute in attributes:
+                self.add_attribute_to_pdf(pdf, attribute)
 
-        pdf.output(output_file_path)
-        print(f"PDF file has been saved to {output_file_path}")
+            pdf.output(output_file_path)
+            print(f"PDF file has been saved to {output_file_path}")
+        except:
+            raise SdTeXProcessingError(f"Error Saving File to {output_file_path}")
 
     def add_attribute_to_pdf(self, pdf, attribute):
         if "src" in attribute:
@@ -105,6 +107,9 @@ class SdTeX:
             self.add_footer(pdf, attribute)
         elif attribute["type"] == "attribution":
             self.add_copyright(pdf, attribute)
+        else:
+            raise SdTeXTagNotFoundError(f"Error: Tag {attribute["type"]} not found ")
+
 
     def add_footer(self, pdf, attribute):
         content = attribute["content"]
@@ -121,6 +126,7 @@ class SdTeX:
                 b = int(font_color[5:7], 16)
             except ValueError:
                 r, g, b = 0, 0, 0
+                print("Warning: Color value {font_color} was not defined! Defaulting to #000000")
         else:
             r, g, b = 0, 0, 0
 
@@ -147,6 +153,7 @@ class SdTeX:
                 b = int(font_color[5:7], 16)
             except ValueError:
                 r, g, b = 0, 0, 0
+                print("Warning: Color value {font_color} was not defined! Defaulting to #000000")
         else:
             r, g, b = 0, 0, 0
 
@@ -448,5 +455,9 @@ class SdTeX:
         self.current_y += cell_height
 
     def apply_text_formatting(self, pdf, text):
-        for line in text.split("\n"):
-            pdf.cell(0, 10, line, ln=True)
+        try:
+            for line in text.split("\n"):
+                pdf.cell(0, 10, line, ln=True)
+        except Exception as e:
+            raise SdTeXProcessingError(f"Error evaluating function: {e}")
+

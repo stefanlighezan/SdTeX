@@ -1,5 +1,5 @@
 import re
-
+from Errors import *
 
 class Processor:
     def __init__(self, content):
@@ -7,6 +7,7 @@ class Processor:
         self.styles = {}
         self.tags = {}
         self.variables = {}
+        self.line_number = 0
 
     def parse_variables(self):
         pattern = r'^(\w+)\s*:\s*"([^"]+)"$'
@@ -42,7 +43,9 @@ class Processor:
             re.DOTALL,
         )
 
+        self.line_number = 0
         for match in re.finditer(tag_pattern, self.content):
+            self.line_number += 1
             tag_type = match.group(1).strip()
             style_string = match.group(2)
             attributes_string = match.group(3)
@@ -61,6 +64,8 @@ class Processor:
             if attributes_string:
                 for line in attributes_string.split(","):
                     parts = line.strip().split(":")
+                    if line.strip().startswith('//'):
+                        continue
                     if len(parts) == 2:
                         key, value = parts
                         attributes[key.strip()] = value.strip()
@@ -71,6 +76,7 @@ class Processor:
                     "content": src,
                     "style": styles,
                     "attributes": attributes,
+                    "line_number": self.line_number
                 }
             else:
                 self.tags[tag_type] = {
@@ -78,12 +84,18 @@ class Processor:
                     "content": tag_content,
                     "style": styles,
                     "attributes": attributes,
+                    "line_number": self.line_number
                 }
 
     def process_content(self):
-        self.parse_variables()
-        self.replace_variables()
-        self.parse_stylesheet()
-        self.parse_tags()
+        try:
+            self.parse_variables()
+            self.replace_variables()
+            self.parse_stylesheet()
+            self.parse_tags()
+        except re.error as e:
+            raise SdTeXSyntaxError(f"Syntax error in regular expression: {e}")
+        except Exception as e:
+            raise SdTeXProcessingError(f"Error processing content: {e}")
 
         return list(self.tags.values())
