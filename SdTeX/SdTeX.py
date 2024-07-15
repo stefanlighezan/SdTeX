@@ -90,6 +90,61 @@ class SdTeX:
             self.add_link(pdf, attribute)
         elif attribute['type'] == 'sdnline':
             self.add_newline(pdf, attribute)
+        elif attribute['type'] == 'sdfooter':
+            self.add_footer(pdf, attribute)
+        elif attribute['type'] == 'attribution':
+            self.add_copyright(pdf, attribute)
+
+    def add_footer(self, pdf, attribute):
+        content = attribute['content']
+        style = attribute['style']
+        font_size = int(style.get('font_size', '10').strip('"').replace('dp', '').strip())
+        font_color = style.get('font_color', '#000000').strip('"')
+
+        if font_color.startswith('#') and len(font_color) == 7:
+            try:
+                r = int(font_color[1:3], 16)
+                g = int(font_color[3:5], 16)
+                b = int(font_color[5:7], 16)
+            except ValueError:
+                r, g, b = 0, 0, 0
+        else:
+            r, g, b = 0, 0, 0
+
+        pdf.set_font("Arial", size=font_size)
+        pdf.set_text_color(r, g, b)
+        pdf.set_y(-pdf.h + 20)
+        pdf.set_x(-pdf.get_string_width(content) - 10)
+        pdf.cell(0, -10, content, 0, 0, 'R')
+        pdf.set_x(0)
+        pdf.set_y(0)
+
+    def add_copyright(self, pdf, attribute):
+        content = attribute['content']
+        style = attribute['style']
+        font_size = int(style.get('font_size', '10').strip('"').replace('dp', '').strip())
+        font_color = style.get('font_color', '#000000').strip('"')
+
+        if font_color.startswith('#') and len(font_color) == 7:
+            try:
+                r = int(font_color[1:3], 16)
+                g = int(font_color[3:5], 16)
+                b = int(font_color[5:7], 16)
+            except ValueError:
+                r, g, b = 0, 0, 0
+        else:
+            r, g, b = 0, 0, 0
+
+        pdf.set_font("Arial", size=font_size)
+        pdf.set_text_color(r, g, b)
+
+        pdf.set_x(-pdf.get_string_width(content) - 10)
+        pdf.set_y(-pdf.h + 8)
+        pdf.cell(0, 0, content, 0, 0, 'R')
+
+        pdf.set_x(0)
+        pdf.set_y(0)
+
     def add_newline(self, pdf, attribute):
         print("Here")
         pdf.ln(int(attribute["attributes"].get('line_height', 0)))

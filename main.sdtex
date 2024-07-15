@@ -1,44 +1,4 @@
-(sdauthor style={font_size: "12dp", font_color: "#555555"})
-Author: Stefan Lighezan
-(!sdauthor)
+(sdfooter)made by stefan lighezan(!sdfooter)
+(attribution)Stefan Lighezan Corp(!attribution)
 
-(sdquote style={font_size: "14dp", font_color: "#888888"})
-Blockquote
-(!sdquote)
-
-(sdbullet style={font_size: "14dp", font_color: "#000000"})
-- First bullet point
-(!sdbullet)
-(sdbullet style={font_size: "14dp", font_color: "#000000"})
-- Second bullet point
-(!sdbullet)
-(sdbullet style={font_size: "14dp", font_color: "#000000"})
-- Third bullet point
-(!sdbullet)
-
-(sdcode style={font_size: "12dp", font_color: "#FF0000"})
-def hello_world():
-    print("Hello, World!")
-(!sdcode)
-
-
-(sdcode style={font_size: "12dp", font_color: "#FF0000"})
-def hello_world():
-    print("Hello, World!")
-(!sdcode)
-
-(sdlink src="help")(!sdlink)
-
-(sdcode style={font_size: "12dp", font_color: "#FF0000"})
-def hello_world():
-    print("Hello, World!")
-(!sdcode)
-
-(sdnline attributes={
-    line_height: 6,
-})(!sdnline)
-
-(sdcode style={font_size: "12dp", font_color: "#FF0000"})
-def hello_world():
-    print("Hello, World!")
-(!sdcode)
+(sdtitle)HELLOE(!sdtitle)
