@@ -14,7 +14,7 @@ class SdTeX:
     def __init__(self, input_file):
         self.input_file = input_file
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.current_y = 0  # Initialize current_y to 0
+        self.current_y = 0
 
     def process_sdtex_file(self):
         with open(self.input_file, 'r') as file:
@@ -86,6 +86,13 @@ class SdTeX:
             self.add_author(pdf, attribute)
         elif attribute['type'] == 'sdcode':
             self.add_code(pdf, attribute)
+        elif attribute['type'] == 'sdlink':
+            self.add_link(pdf, attribute)
+        elif attribute['type'] == 'sdnline':
+            self.add_newline(pdf, attribute)
+    def add_newline(self, pdf, attribute):
+        print("Here")
+        pdf.ln(int(attribute["attributes"].get('line_height', 0)))
 
     def add_title(self, pdf, attribute):
         content = attribute['content']
@@ -111,27 +118,21 @@ class SdTeX:
 
         pdf.set_text_color(r, g, b)
 
-        # Apply text formatting
         self.apply_text_formatting(pdf, content)
 
-        # Calculate the height of the cell
         cell_height = pdf.font_size + 8
 
-        # Check if the text will wrap
         text_width = pdf.get_string_width(content)
         page_width = pdf.w - 2 * pdf.l_margin
         num_lines = 1
         if text_width > page_width:
-            # Calculate the number of lines
             num_lines = math.ceil(text_width / page_width)
             cell_height *= num_lines
 
         if self.current_y + cell_height > pdf.page_break_trigger:
             pdf.add_page()
             self.current_y = 0
-
-        pdf.ln(cell_height)  # Move to the next line
-        self.current_y += cell_height  # Increase current_y by the cell height + padding
+        self.current_y += cell_height
 
     def add_text(self, pdf, attribute):
         content = attribute['content']
@@ -146,7 +147,7 @@ class SdTeX:
         if self.download_image(src, image_file_path):
             with PILImage.open(image_file_path) as img:
                 width, height = img.size
-                resized_height = 180 * height / width  # Adjusting width to 180, maintaining aspect ratio
+                resized_height = 180 * height / width
 
             if self.current_y + resized_height + 10 > pdf.page_break_trigger:
                 pdf.add_page()
@@ -157,6 +158,45 @@ class SdTeX:
 
         else:
             print(f"Failed to download and embed image from {src}.")
+
+    def add_link(self, pdf, attribute):
+        content = attribute['content']
+        link_url = attribute.get('url', content)
+        style = attribute['style']
+        font_size = int(style.get('font_size', '12').strip('"').replace('dp', '').strip())
+        font_color = style.get('font_color', '#0000FF').strip('"')
+
+        if font_color.startswith('#') and len(font_color) == 7:
+            try:
+                r = int(font_color[1:3], 16)
+                g = int(font_color[3:5], 16)
+                b = int(font_color[5:7], 16)
+            except ValueError:
+                r, g, b = 0, 0, 0
+        else:
+            r, g, b = 0, 0, 0
+
+        pdf.set_font("Arial", size=font_size, style='U')
+        pdf.set_text_color(r, g, b)
+
+        words = content.split()
+        line = ""
+        for word in words:
+            if pdf.get_string_width(line + word) < pdf.w - 2 * pdf.l_margin:
+                line += f"{word} "
+            else:
+                pdf.cell(0, 10, line, ln=True, link=link_url)
+                line = f"{word} "
+
+        if line:
+            pdf.cell(0, 10, line, ln=True, link=link_url)
+
+        cell_height = pdf.font_size + 2
+        if self.current_y + cell_height > pdf.page_break_trigger:
+            pdf.add_page()
+            self.current_y = 0
+        self.current_y += cell_height
+
 
     def add_graph(self, pdf, attribute):
         attributes = attribute['attributes']
@@ -172,14 +212,14 @@ class SdTeX:
 
         with PILImage.open(graph_file_path) as img:
             width, height = img.size
-            resized_height = 180 * height / width  # Adjusting width to 180, maintaining aspect ratio
+            resized_height = 180 * height / width
 
         if self.current_y + resized_height + 10 > pdf.page_break_trigger:
             pdf.add_page()
             self.current_y = 0
 
         pdf.image(graph_file_path, x=10, y=self.current_y + 10, w=180, h=resized_height)
-        self.current_y += resized_height  # Increase current_y by resized image height + padding
+        self.current_y += resized_height
 
     def save_as_graph(self, function, first_point, last_point, quality, graph_color, graph_file_path):
         x_values = np.linspace(first_point, last_point, int((last_point - first_point) * quality))
@@ -194,7 +234,6 @@ class SdTeX:
         print(f"Graph image has been saved to {graph_file_path}")
 
     def evaluate_function(self, function, x_values):
-        # Vectorized evaluation using NumPy
         return [eval(eval(function.replace('x', str(x)))) for x in x_values]
 
     def add_bullet(self, pdf, attribute):
@@ -216,7 +255,6 @@ class SdTeX:
         pdf.set_font("Arial", size=font_size)
         pdf.set_text_color(r, g, b)
 
-        # Apply text formatting
         self.apply_text_formatting(pdf, f'- {content}')
 
         cell_height = pdf.font_size + 2
@@ -224,7 +262,6 @@ class SdTeX:
             pdf.add_page()
             self.current_y = 0
 
-        pdf.ln(cell_height)
         self.current_y += cell_height
 
     def add_quote(self, pdf, attribute):
@@ -243,10 +280,9 @@ class SdTeX:
         else:
             r, g, b = 0, 0, 0
 
-        pdf.set_font("Arial", size=font_size, style='I')  # Italics for quotes
+        pdf.set_font("Arial", size=font_size, style='I')
         pdf.set_text_color(r, g, b)
 
-        # Apply text formatting
         self.apply_text_formatting(pdf, content)
 
         cell_height = pdf.font_size + 6
@@ -254,7 +290,6 @@ class SdTeX:
             pdf.add_page()
             self.current_y = 0
 
-        pdf.ln(cell_height)
         self.current_y += cell_height
 
     def add_author(self, pdf, attribute):
@@ -273,18 +308,15 @@ class SdTeX:
         else:
             r, g, b = 0, 0, 0
 
-        pdf.set_font("Arial", size=font_size, style='I')  # Italics for author
+        pdf.set_font("Arial", size=font_size, style='I')
         pdf.set_text_color(r, g, b)
 
-        # Apply text formatting
         self.apply_text_formatting(pdf, content)
 
         cell_height = pdf.font_size + 6
         if self.current_y + cell_height > pdf.page_break_trigger:
             pdf.add_page()
             self.current_y = 0
-
-        pdf.ln(cell_height)
         self.current_y += cell_height
 
     def add_code(self, pdf, attribute):
@@ -303,10 +335,9 @@ class SdTeX:
         else:
             r, g, b = 0, 0, 0
 
-        pdf.set_font("Courier", size=font_size)  # Monospaced font for code
+        pdf.set_font("Courier", size=font_size)
         pdf.set_text_color(r, g, b)
 
-        # Apply text formatting
         self.apply_text_formatting(pdf, content)
 
         cell_height = pdf.font_size + 4
@@ -314,15 +345,14 @@ class SdTeX:
             pdf.add_page()
             self.current_y = 0
 
-        pdf.ln(cell_height)
         self.current_y += cell_height
 
     def apply_text_formatting(self, pdf, text):
-        # Apply any text formatting, like line breaks, spaces, etc.
+        
         for line in text.split('\n'):
             pdf.cell(0, 10, line, ln=True)
 
 if __name__ == "__main__":
-    input_file = "../main.sdtex"  # Replace with the path to your input file
+    input_file = "../main.sdtex"  
     sdtex = SdTeX(input_file)
     sdtex.run()

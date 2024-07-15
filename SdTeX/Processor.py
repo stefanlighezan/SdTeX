@@ -23,11 +23,11 @@ class Processor:
 
     def parse_tags(self):
         tag_pattern = re.compile(
-            r'\((\w+)'                               # Tag type
-            r'(?:\s+style\s*=\s*\{([^}]*)\})?'       # Optional style
-            r'(?:\s+attributes\s*=\s*\{([^}]*)\})?'  # Optional attributes
-            r'(?:\s+src\s*=\s*"([^"]*)")?'           # Optional src
-            r'\)(.*?)\(!\1\)',                       # Tag content and closing tag
+            r'\((\w+)'                               
+            r'(?:\s+style\s*=\s*\{([^}]*)\})?'       
+            r'(?:\s+attributes\s*=\s*\{([^}]*)\})?'  
+            r'(?:\s+src\s*=\s*"([^"]*)")?'          
+            r'\)(.*?)\(!\1\)',
             re.DOTALL
         )
 
@@ -72,11 +72,11 @@ class Processor:
     def replace_tag(self, match):
         tag_type = match.group(1).strip()
         tag_content = match.group(2).strip()
-        style = self.styles.get(tag_type, {})  # Get style for the tag type, default to empty dict
+        style = self.styles.get(tag_type, {})
         self.tags.append({
             'type': tag_type,
             'content': tag_content,
-            'style': style  # Ensure 'style' matches the key used when accessing in 'save_as_pdf'
+            'style': style
         })
         return ''
 

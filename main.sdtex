@@ -26,3 +26,19 @@ def hello_world():
 def hello_world():
     print("Hello, World!")
 (!sdcode)
+
+(sdlink src="help")(!sdlink)
+
+(sdcode style={font_size: "12dp", font_color: "#FF0000"})
+def hello_world():
+    print("Hello, World!")
+(!sdcode)
+
+(sdnline attributes={
+    line_height: 6,
+})(!sdnline)
+
+(sdcode style={font_size: "12dp", font_color: "#FF0000"})
+def hello_world():
+    print("Hello, World!")
+(!sdcode)
