@@ -4,7 +4,17 @@ class Processor:
     def __init__(self, content):
         self.content = content
         self.styles = {}
-        self.tags = []
+        self.tags = {}
+        self.variables = {}
+
+    def parse_variables(self):
+        pattern = r'^(\w+)\s*:\s*"([^"]+)"$'
+        matches = re.findall(pattern, self.content, flags=re.MULTILINE)
+        self.variables = {name: value for name, value in matches}
+
+    def replace_variables(self):
+        for key, value in self.variables.items():
+            self.content = self.content.replace(f"${key}", value)
 
     def parse_stylesheet(self):
         pattern = r'\((.*?)\s*style=\s*\{(.*?)\}\)'
@@ -23,10 +33,10 @@ class Processor:
 
     def parse_tags(self):
         tag_pattern = re.compile(
-            r'\((\w+)'                               
-            r'(?:\s+style\s*=\s*\{([^}]*)\})?'       
-            r'(?:\s+attributes\s*=\s*\{([^}]*)\})?'  
-            r'(?:\s+src\s*=\s*"([^"]*)")?'          
+            r'\((\w+)'
+            r'(?:\s+style\s*=\s*\{([^}]*)\})?'
+            r'(?:\s+attributes\s*=\s*\{([^}]*)\})?'
+            r'(?:\s+src\s*=\s*"([^"]*)")?'
             r'\)(.*?)\(!\1\)',
             re.DOTALL
         )
@@ -55,33 +65,24 @@ class Processor:
                         attributes[key.strip()] = value.strip()
 
             if src:
-                self.tags.append({
+                self.tags[tag_type] = {
                     'type': tag_type,
                     'content': src,
                     'style': styles,
                     'attributes': attributes
-                })
+                }
             else:
-                self.tags.append({
+                self.tags[tag_type] = {
                     'type': tag_type,
                     'content': tag_content,
                     'style': styles,
                     'attributes': attributes
-                })
-
-    def replace_tag(self, match):
-        tag_type = match.group(1).strip()
-        tag_content = match.group(2).strip()
-        style = self.styles.get(tag_type, {})
-        self.tags.append({
-            'type': tag_type,
-            'content': tag_content,
-            'style': style
-        })
-        return ''
+                }
 
     def process_content(self):
+        self.parse_variables()
+        self.replace_variables()
         self.parse_stylesheet()
         self.parse_tags()
 
-        return self.tags
+        return list(self.tags.values())

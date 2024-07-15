@@ -22,6 +22,8 @@ class SdTeX:
             processor = Processor(content)
             processed_content = processor.process_content()
             return processed_content
+    def set_variable(self, name, value):
+        self.variables[name] = value
 
     def create_output_directory(self):
         output_dir = os.path.join(self.script_dir, 'Output')
