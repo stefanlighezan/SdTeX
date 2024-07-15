@@ -78,6 +78,14 @@ class SdTeX:
                 self.add_attribute_to_pdf(pdf, child_attribute)
         elif attribute['type'] == 'text':
             self.add_text(pdf, attribute)
+        elif attribute['type'] == 'sdbullet':
+            self.add_bullet(pdf, attribute)
+        elif attribute['type'] == 'sdquote':
+            self.add_quote(pdf, attribute)
+        elif attribute['type'] == 'sdauthor':
+            self.add_author(pdf, attribute)
+        elif attribute['type'] == 'sdcode':
+            self.add_code(pdf, attribute)
 
     def add_title(self, pdf, attribute):
         content = attribute['content']
@@ -144,11 +152,8 @@ class SdTeX:
                 pdf.add_page()
                 self.current_y = 0
 
-            pdf.image(image_file_path, x=10, y=self.current_y + 10, w=180)
-            self.current_y += resized_height + 20  # Increase current_y by resized image height + padding
-
-            # Add a newline to separate the image from the text
-            pdf.ln(10)
+            pdf.image(image_file_path, x=10, y=self.current_y + 10, w=180, h=resized_height)
+            self.current_y += resized_height
 
         else:
             print(f"Failed to download and embed image from {src}.")
@@ -173,11 +178,8 @@ class SdTeX:
             pdf.add_page()
             self.current_y = 0
 
-        pdf.image(graph_file_path, x=10, y=self.current_y + 10, w=180)
-        self.current_y += resized_height + 20  # Increase current_y by resized image height + padding
-
-        # Add a newline to separate the graph from the text
-        pdf.ln(10)
+        pdf.image(graph_file_path, x=10, y=self.current_y + 10, w=180, h=resized_height)
+        self.current_y += resized_height  # Increase current_y by resized image height + padding
 
     def save_as_graph(self, function, first_point, last_point, quality, graph_color, graph_file_path):
         x_values = np.linspace(first_point, last_point, int((last_point - first_point) * quality))
@@ -195,24 +197,132 @@ class SdTeX:
         # Vectorized evaluation using NumPy
         return [eval(eval(function.replace('x', str(x)))) for x in x_values]
 
+    def add_bullet(self, pdf, attribute):
+        content = attribute['content']
+        style = attribute['style']
+        font_size = int(style.get('font_size', '12').strip('"').replace('dp', '').strip())
+        font_color = style.get('font_color', '#000000').strip('"')
+
+        if font_color.startswith('#') and len(font_color) == 7:
+            try:
+                r = int(font_color[1:3], 16)
+                g = int(font_color[3:5], 16)
+                b = int(font_color[5:7], 16)
+            except ValueError:
+                r, g, b = 0, 0, 0
+        else:
+            r, g, b = 0, 0, 0
+
+        pdf.set_font("Arial", size=font_size)
+        pdf.set_text_color(r, g, b)
+
+        # Apply text formatting
+        self.apply_text_formatting(pdf, f'- {content}')
+
+        cell_height = pdf.font_size + 2
+        if self.current_y + cell_height > pdf.page_break_trigger:
+            pdf.add_page()
+            self.current_y = 0
+
+        pdf.ln(cell_height)
+        self.current_y += cell_height
+
+    def add_quote(self, pdf, attribute):
+        content = attribute['content']
+        style = attribute['style']
+        font_size = int(style.get('font_size', '12').strip('"').replace('dp', '').strip())
+        font_color = style.get('font_color', '#888888').strip('"')
+
+        if font_color.startswith('#') and len(font_color) == 7:
+            try:
+                r = int(font_color[1:3], 16)
+                g = int(font_color[3:5], 16)
+                b = int(font_color[5:7], 16)
+            except ValueError:
+                r, g, b = 0, 0, 0
+        else:
+            r, g, b = 0, 0, 0
+
+        pdf.set_font("Arial", size=font_size, style='I')  # Italics for quotes
+        pdf.set_text_color(r, g, b)
+
+        # Apply text formatting
+        self.apply_text_formatting(pdf, content)
+
+        cell_height = pdf.font_size + 6
+        if self.current_y + cell_height > pdf.page_break_trigger:
+            pdf.add_page()
+            self.current_y = 0
+
+        pdf.ln(cell_height)
+        self.current_y += cell_height
+
+    def add_author(self, pdf, attribute):
+        content = attribute['content']
+        style = attribute['style']
+        font_size = int(style.get('font_size', '12').strip('"').replace('dp', '').strip())
+        font_color = style.get('font_color', '#555555').strip('"')
+
+        if font_color.startswith('#') and len(font_color) == 7:
+            try:
+                r = int(font_color[1:3], 16)
+                g = int(font_color[3:5], 16)
+                b = int(font_color[5:7], 16)
+            except ValueError:
+                r, g, b = 0, 0, 0
+        else:
+            r, g, b = 0, 0, 0
+
+        pdf.set_font("Arial", size=font_size, style='I')  # Italics for author
+        pdf.set_text_color(r, g, b)
+
+        # Apply text formatting
+        self.apply_text_formatting(pdf, content)
+
+        cell_height = pdf.font_size + 6
+        if self.current_y + cell_height > pdf.page_break_trigger:
+            pdf.add_page()
+            self.current_y = 0
+
+        pdf.ln(cell_height)
+        self.current_y += cell_height
+
+    def add_code(self, pdf, attribute):
+        content = attribute['content']
+        style = attribute['style']
+        font_size = int(style.get('font_size', '12').strip('"').replace('dp', '').strip())
+        font_color = style.get('font_color', '#FF0000').strip('"')
+
+        if font_color.startswith('#') and len(font_color) == 7:
+            try:
+                r = int(font_color[1:3], 16)
+                g = int(font_color[3:5], 16)
+                b = int(font_color[5:7], 16)
+            except ValueError:
+                r, g, b = 0, 0, 0
+        else:
+            r, g, b = 0, 0, 0
+
+        pdf.set_font("Courier", size=font_size)  # Monospaced font for code
+        pdf.set_text_color(r, g, b)
+
+        # Apply text formatting
+        self.apply_text_formatting(pdf, content)
+
+        cell_height = pdf.font_size + 4
+        if self.current_y + cell_height > pdf.page_break_trigger:
+            pdf.add_page()
+            self.current_y = 0
+
+        pdf.ln(cell_height)
+        self.current_y += cell_height
+
     def apply_text_formatting(self, pdf, text):
-        parts = re.split(r'(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*)', text)
-        for part in parts:
-            if part.startswith('***') and part.endswith('***'):
-                pdf.set_font("Arial", style='BI')
-                pdf.multi_cell(0, 5, part[3:-3], align='L')
-            elif part.startswith('**') and part.endswith('**'):
-                pdf.set_font("Arial", style='B')
-                pdf.multi_cell(0, 5, part[2:-2], align='L')
-            elif part.startswith('*') and part.endswith('*'):
-                pdf.set_font("Arial", style='I')
-                pdf.multi_cell(0, 5, part[1:-1], align='L')
-            else:
-                pdf.set_font("Arial")
-                pdf.multi_cell(0, 5, part, align='L')
-def main():
-    sdtex = SdTeX("../main.sdtex")
-    sdtex.run()
+        # Apply any text formatting, like line breaks, spaces, etc.
+        for line in text.split('\n'):
+            pdf.cell(0, 10, line, ln=True)
 
 if __name__ == "__main__":
-    main()
+    input_file = "../main.sdtex"  # Replace with the path to your input file
+    sdtex = SdTeX(input_file)
+    sdtex.run()

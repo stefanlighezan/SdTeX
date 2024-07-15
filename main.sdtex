@@ -1,4 +1,28 @@
-(text style={
-    font_size: 35,
-    font_color: "#000000",
-}) Graph of **bold**(!text)
+(sdauthor style={font_size: "12dp", font_color: "#555555"})
+Author: Stefan Lighezan
+(!sdauthor)
+
+(sdquote style={font_size: "14dp", font_color: "#888888"})
+Blockquote
+(!sdquote)
+
+(sdbullet style={font_size: "14dp", font_color: "#000000"})
+- First bullet point
+(!sdbullet)
+(sdbullet style={font_size: "14dp", font_color: "#000000"})
+- Second bullet point
+(!sdbullet)
+(sdbullet style={font_size: "14dp", font_color: "#000000"})
+- Third bullet point
+(!sdbullet)
+
+(sdcode style={font_size: "12dp", font_color: "#FF0000"})
+def hello_world():
+    print("Hello, World!")
+(!sdcode)
+
+
+(sdcode style={font_size: "12dp", font_color: "#FF0000"})
+def hello_world():
+    print("Hello, World!")
+(!sdcode)

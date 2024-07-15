@@ -22,7 +22,6 @@ class Processor:
         return self.styles
 
     def parse_tags(self):
-        # Unified regex pattern for tags
         tag_pattern = re.compile(
             r'\((\w+)'                               # Tag type
             r'(?:\s+style\s*=\s*\{([^}]*)\})?'       # Optional style
