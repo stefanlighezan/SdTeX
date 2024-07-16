@@ -26,3 +26,4 @@ class SdTeXAttributeError(SdTeXError):
 
 class SdTeXSrcError(SdTeXError):
     pass
+

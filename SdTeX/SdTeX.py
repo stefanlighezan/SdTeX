@@ -12,18 +12,52 @@ import re
 from Errors import *
 
 
+import os
+import requests
+from io import BytesIO
+from PIL import Image as PILImage
+from fpdf import FPDF
+import matplotlib.pyplot as plt
+import matplotlib.colors
+import numpy as np
+import math
+from Processor import Processor
+import re
+from Errors import *
+
+
 class SdTeX:
     def __init__(self, input_file):
         self.input_file = input_file
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
         self.current_y = 0
+        self.variables = {}
 
     def process_sdtex_file(self):
-        with open(self.input_file, "r") as file:
-            content = file.read()
-            processor = Processor(content)
-            processed_content = processor.process_content()
-            return processed_content
+        try:
+            with open(self.input_file, "r") as file:
+                content = file.read()
+                processor = Processor(content)
+                processed_content = processor.process_content()
+                return processed_content
+        except FileNotFoundError:
+            raise SdTeXProcessingError(f"File not found: {self.input_file}")
+        except SdTeXSyntaxError as e:
+            raise SdTeXProcessingError(str(e))
+        except SdTeXVariableError as e:
+            raise SdTeXProcessingError(str(e))
+        except SdTeXStyleError as e:
+            raise SdTeXProcessingError(str(e))
+        except SdTeXTagNotFoundError as e:
+            raise SdTeXProcessingError(str(e))
+        except SdTeXUnclosedBracketError as e:
+            raise SdTeXProcessingError(str(e))
+        except SdTeXSrcError as e:
+            raise SdTeXProcessingError(str(e))
+        except SdTeXAttributeError as e:
+            raise SdTeXProcessingError(str(e))
+        except Exception as e:
+            raise SdTeXProcessingError(f"Unexpected error: {e}")
 
     def set_variable(self, name, value):
         self.variables[name] = value
@@ -45,8 +79,10 @@ class SdTeX:
                     f"Failed to download image from {url}. Status code: {response.status_code}"
                 )
                 return False
+        except requests.exceptions.RequestException as e:
+            raise SdTeXSrcError(f"Error downloading image from {url}: {e}")
         except Exception as e:
-            raise SdTeXSrcError(f"Error finding image at address {url}")
+            raise SdTeXSrcError(f"Error finding image at address {url}: {e}")
 
     def run(self):
         input_file_path = self.input_file
@@ -71,104 +107,140 @@ class SdTeX:
 
             pdf.output(output_file_path)
             print(f"PDF file has been saved to {output_file_path}")
-        except:
-            raise SdTeXProcessingError(f"Error Saving File to {output_file_path}")
+        except SdTeXProcessingError as e:
+            raise e
+        except Exception as e:
+            raise SdTeXProcessingError(f"Error Saving File to {output_file_path}: {e}")
 
     def add_attribute_to_pdf(self, pdf, attribute):
-        if "src" in attribute:
-            pdf.set_link(
-                link_id=pdf.add_link(), y=pdf.y + pdf.font_size, page=pdf.page_no()
-            )
+        try:
+            if "src" in attribute:
+                pdf.set_link(
+                    link_id=pdf.add_link(), y=pdf.y + pdf.font_size, page=pdf.page_no()
+                )
 
-        if attribute["type"] == "sdtitle":
-            self.add_title(pdf, attribute)
-        elif attribute["type"] == "sdgraph":
-            self.add_graph(pdf, attribute)
-        elif attribute["type"] == "sdimage":
-            self.add_image(pdf, attribute)
-        elif attribute["type"] == "sdtex":
-            for child_attribute in attribute["children"]:
-                self.add_attribute_to_pdf(pdf, child_attribute)
-        elif attribute["type"] == "text":
-            self.add_text(pdf, attribute)
-        elif attribute["type"] == "sdbullet":
-            self.add_bullet(pdf, attribute)
-        elif attribute["type"] == "sdquote":
-            self.add_quote(pdf, attribute)
-        elif attribute["type"] == "sdauthor":
-            self.add_author(pdf, attribute)
-        elif attribute["type"] == "sdcode":
-            self.add_code(pdf, attribute)
-        elif attribute["type"] == "sdlink":
-            self.add_link(pdf, attribute)
-        elif attribute["type"] == "sdnline":
-            self.add_newline(pdf, attribute)
-        elif attribute["type"] == "sdfooter":
-            self.add_footer(pdf, attribute)
-        elif attribute["type"] == "attribution":
-            self.add_copyright(pdf, attribute)
-        else:
-            raise SdTeXTagNotFoundError(f"Error: Tag {attribute["type"]} not found ")
+            if attribute["type"] == "sdtitle":
+                self.add_title(pdf, attribute)
+            elif attribute["type"] == "sdgraph":
+                self.add_graph(pdf, attribute)
+            elif attribute["type"] == "sdimage":
+                self.add_image(pdf, attribute)
+            elif attribute["type"] == "sdtex":
+                for child_attribute in attribute["children"]:
+                    self.add_attribute_to_pdf(pdf, child_attribute)
+            elif attribute["type"] == "text":
+                self.add_text(pdf, attribute)
+            elif attribute["type"] == "sdbullet":
+                self.add_bullet(pdf, attribute)
+            elif attribute["type"] == "sdquote":
+                self.add_quote(pdf, attribute)
+            elif attribute["type"] == "sdauthor":
+                self.add_author(pdf, attribute)
+            elif attribute["type"] == "sdcode":
+                self.add_code(pdf, attribute)
+            elif attribute["type"] == "sdlink":
+                self.add_link(pdf, attribute)
+            elif attribute["type"] == "sdnline":
+                self.add_newline(pdf, attribute)
+            elif attribute["type"] == "sdfooter":
+                self.add_footer(pdf, attribute)
+            elif attribute["type"] == "attribution":
+                self.add_copyright(pdf, attribute)
+            else:
+                raise SdTeXTagNotFoundError(f"Error: Tag {attribute['type']} not found")
 
+        except SdTeXProcessingError as e:
+            raise e
+        except SdTeXSyntaxError as e:
+            raise SdTeXProcessingError(str(e))
+        except SdTeXVariableError as e:
+            raise SdTeXProcessingError(str(e))
+        except SdTeXStyleError as e:
+            raise SdTeXProcessingError(str(e))
+        except SdTeXTagNotFoundError as e:
+            raise SdTeXProcessingError(str(e))
+        except SdTeXAttributeError as e:
+            raise SdTeXProcessingError(str(e))
+        except Exception as e:
+            raise SdTeXProcessingError(f"Error adding attribute to PDF: {e}")
 
     def add_footer(self, pdf, attribute):
-        content = attribute["content"]
-        style = attribute["style"]
-        font_size = int(
-            style.get("font_size", "10").strip('"').replace("dp", "").strip()
-        )
-        font_color = style.get("font_color", "#000000").strip('"')
+        try:
+            content = attribute["content"]
+            style = attribute["style"]
+            font_size = int(
+                style.get("font_size", "10").strip('"').replace("dp", "").strip()
+            )
+            font_color = style.get("font_color", "#000000").strip('"')
 
-        if font_color.startswith("#") and len(font_color) == 7:
-            try:
-                r = int(font_color[1:3], 16)
-                g = int(font_color[3:5], 16)
-                b = int(font_color[5:7], 16)
-            except ValueError:
+            if font_color.startswith("#") and len(font_color) == 7:
+                try:
+                    r = int(font_color[1:3], 16)
+                    g = int(font_color[3:5], 16)
+                    b = int(font_color[5:7], 16)
+                except ValueError:
+                    r, g, b = 0, 0, 0
+                    print(f"Warning: Color value {font_color} was not defined! Defaulting to #000000")
+            else:
                 r, g, b = 0, 0, 0
-                print("Warning: Color value {font_color} was not defined! Defaulting to #000000")
-        else:
-            r, g, b = 0, 0, 0
 
-        pdf.set_font("Arial", size=font_size)
-        pdf.set_text_color(r, g, b)
-        pdf.set_y(-pdf.h + 20)
-        pdf.set_x(-pdf.get_string_width(content) - 10)
-        pdf.cell(0, -10, content, 0, 0, "R", link=attribute.get("src"))
-        pdf.set_x(0)
-        pdf.set_y(0)
+            pdf.set_font("Arial", size=font_size)
+            pdf.set_text_color(r, g, b)
+            pdf.set_y(-pdf.h + 20)
+            pdf.set_x(-pdf.get_string_width(content) - 10)
+            pdf.cell(0, -10, content, 0, 0, "R", link=attribute.get("src"))
+            pdf.set_x(0)
+            pdf.set_y(0)
+
+        except SdTeXProcessingError as e:
+            raise e
+        except Exception as e:
+            raise SdTeXProcessingError(f"Error adding footer to PDF: {e}")
 
     def add_copyright(self, pdf, attribute):
-        content = attribute["content"]
-        style = attribute["style"]
-        font_size = int(
-            style.get("font_size", "10").strip('"').replace("dp", "").strip()
-        )
-        font_color = style.get("font_color", "#000000").strip('"')
+        try:
+            content = attribute["content"]
+            style = attribute["style"]
+            font_size = int(
+                style.get("font_size", "10").strip('"').replace("dp", "").strip()
+            )
+            font_color = style.get("font_color", "#000000").strip('"')
 
-        if font_color.startswith("#") and len(font_color) == 7:
-            try:
-                r = int(font_color[1:3], 16)
-                g = int(font_color[3:5], 16)
-                b = int(font_color[5:7], 16)
-            except ValueError:
+            if font_color.startswith("#") and len(font_color) == 7:
+                try:
+                    r = int(font_color[1:3], 16)
+                    g = int(font_color[3:5], 16)
+                    b = int(font_color[5:7], 16)
+                except ValueError:
+                    r, g, b = 0, 0, 0
+                    print(f"Warning: Color value {font_color} was not defined! Defaulting to #000000")
+            else:
                 r, g, b = 0, 0, 0
-                print("Warning: Color value {font_color} was not defined! Defaulting to #000000")
-        else:
-            r, g, b = 0, 0, 0
 
-        pdf.set_font("Arial", size=font_size)
-        pdf.set_text_color(r, g, b)
+            pdf.set_font("Arial", size=font_size)
+            pdf.set_text_color(r, g, b)
 
-        pdf.set_x(-pdf.get_string_width(content) - 10)
-        pdf.set_y(-pdf.h + 8)
-        pdf.cell(0, 0, content, 0, 0, "R", link=attribute.get("src"))
+            pdf.set_x(-pdf.get_string_width(content) - 10)
+            pdf.set_y(-pdf.h + 8)
+            pdf.cell(0, 0, content, 0, 0, "R", link=attribute.get("src"))
 
-        pdf.set_x(0)
-        pdf.set_y(0)
+            pdf.set_x(0)
+            pdf.set_y(0)
+
+        except SdTeXProcessingError as e:
+            raise e
+        except Exception as e:
+            raise SdTeXProcessingError(f"Error adding copyright to PDF: {e}")
 
     def add_newline(self, pdf, attribute):
-        pdf.ln(int(attribute["attributes"].get("line_height", 0)))
+        try:
+            pdf.ln(int(attribute["attributes"].get("line_height", 0)))
+
+        except SdTeXProcessingError as e:
+            raise e
+        except Exception as e:
+            raise SdTeXProcessingError(f"Error adding newline to PDF: {e}")
+
 
     def add_title(self, pdf, attribute):
         content = attribute["content"]
